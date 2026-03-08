@@ -17,7 +17,7 @@ jobs:
       - name: Checkout vault (repositório de origem)
         uses: actions/checkout@v4
         with:
-          repository: Abra-oMaker/Obsidian   # ← Altere aqui
+          repository: Abra-oMaker/Obsidian
           path: vault-source
           token: ${{ secrets.VAULT_ACCESS_TOKEN }}
 
@@ -26,7 +26,25 @@ jobs:
           rm -rf content/*
           cp -r "vault-source/Notas - Método Datenbase/." content/
           cp -r "vault-source/Arquivos/." content/
+          mkdir -p content/Imagens
+          cp -r "vault-source/Imagens/." content/Imagens/
           echo "✅ Notas copiadas para content/"
+
+      - name: Criar página inicial (Bem vindo)
+        run: |
+          printf -- '---\ntitle: Bem vindo\n---\n\n![[Bem vindo]]\n' > content/index.md
+          echo "✅ index.md criado"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências Python
+        run: pip install pyyaml
+
+      - name: Gerar wikilinks nas notas de índice
+        run: python generate_index_links.py
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
