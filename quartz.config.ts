@@ -9,6 +9,7 @@ import * as Plugin from "./quartz/plugins"
 const config: QuartzConfig = {
   configuration: {
     pageTitle: "📔 GugaViaro's Vault",
+    homePage: "Bem vindo",
     pageTitleSuffix: "",
     enableSPA: true,
     enablePopovers: true,
