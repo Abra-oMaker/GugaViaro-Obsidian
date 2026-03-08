@@ -1,0 +1,59 @@
+name: Sync Vault e Deploy Quartz
+
+on:
+  repository_dispatch:
+    types: [vault-updated]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositório do Quartz
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout vault (repositório de origem)
+        uses: actions/checkout@v4
+        with:
+          repository: Abra-oMaker/Obsidian   # ← Altere aqui
+          path: vault-source
+          token: ${{ secrets.VAULT_ACCESS_TOKEN }}
+
+      - name: Copiar pastas publicadas para content/
+        run: |
+          rm -rf content/*
+          cp -r "vault-source/Notas - Método Datenbase/." content/
+          cp -r "vault-source/Arquivos/." content/
+          echo "✅ Notas copiadas para content/"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build Quartz
+        run: npx quartz build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build-and-deploy
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy para GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
