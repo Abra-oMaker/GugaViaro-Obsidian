@@ -16,7 +16,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "pt-BR",
-    baseUrl: "Abra-oMaker.github.io/GugaViaro-Obsidian",
+    baseUrl: "abra-omaker.github.io/GugaViaro-Obsidian",
     ignorePatterns: ["private", "templates", ".obsidian"],
     defaultDateType: "modified",
     theme: {
