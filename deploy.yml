@@ -26,6 +26,11 @@ jobs:
           rm -rf content/*
           cp -r "vault-source/Notas - Método Datenbase/." content/
           cp -r "vault-source/Arquivos/." content/
+          echo "---" > content/index.md
+          echo "title: Bem vindo" >> content/index.md
+          echo "---" >> content/index.md
+          echo "" >> content/index.md
+          echo "![[4. Permanentes/Bem vindo]]" >> content/index.md
           echo "✅ Notas copiadas para content/"
 
       - name: Setup Node.js
