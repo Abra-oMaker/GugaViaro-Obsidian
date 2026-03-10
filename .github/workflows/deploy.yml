@@ -1,80 +1,151 @@
-name: Sync Vault e Deploy Quartz
+#!/usr/bin/env python3
+"""
+Gera wikilinks estáticos nas notas de índice do Quartz,
+substituindo os blocos dataviewjs por listas de [[links]] reais.
+Também gera tabela de jogos para nota de HOBBIES.
+"""
 
-on:
-  repository_dispatch:
-    types: [vault-updated]
+import os
+import re
+import yaml
+from pathlib import Path
+from collections import defaultdict
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+CONTENT_DIR = Path("content")
 
-    steps:
-      - name: Checkout repositório do Quartz
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+indice_num_para_nome = {}
+referencias = defaultdict(list)
+permanentes = defaultdict(list)
+jogos = defaultdict(list)  # índice -> lista de dicts com dados do jogo
 
-      - name: Checkout vault (repositório de origem)
-        uses: actions/checkout@v4
-        with:
-          repository: Abra-oMaker/Obsidian
-          path: vault-source
-          token: ${{ secrets.VAULT_ACCESS_TOKEN }}
+def parse_frontmatter(content):
+    if not content.startswith("---"):
+        return {}, content
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return {}, content
+    try:
+        fm = yaml.safe_load(parts[1]) or {}
+        return fm, parts[2]
+    except:
+        return {}, content
 
-      - name: Copiar pastas publicadas para content/
-        run: |
-          rm -rf content/*
-          cp -r "vault-source/Notas - Método Datenbase/." content/
-          cp -r "vault-source/Arquivos/." content/
-          mkdir -p content/Imagens
-          cp -r "vault-source/Imagens/." content/Imagens/
-          echo "✅ Notas copiadas para content/"
+def normalizar_indice(valor):
+    if valor is None:
+        return []
+    if isinstance(valor, list):
+        result = []
+        for v in valor:
+            result.extend(normalizar_indice(v))
+        return result
+    s = str(valor).strip()
+    match = re.match(r'\[\[([^\]|]+)', s)
+    if match:
+        return [match.group(1).strip()]
+    return [s]
 
-      - name: Criar página inicial (Bem vindo)
-        run: |
-          printf -- '---\ntitle: Bem vindo\n---\n\n![[Bem vindo]]\n' > content/index.md
-          echo "✅ index.md criado"
+def get_tags(fm):
+    tags = fm.get("tags", [])
+    if isinstance(tags, str):
+        tags = [tags]
+    return [t.lstrip("#").strip() for t in (tags or [])]
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+# Passo 1: Descobrir notas de índice
+for md_file in CONTENT_DIR.rglob("*.md"):
+    content = md_file.read_text(encoding="utf-8")
+    fm, body = parse_frontmatter(content)
+    tags = get_tags(fm)
+    nome = md_file.stem
 
-      - name: Instalar dependências Python
-        run: pip install pyyaml
+    if "nota-índice" in tags or "nota-indice" in tags:
+        idx_val = fm.get("Índice") or fm.get("Indice")
+        nums = normalizar_indice(idx_val)
+        for num in nums:
+            indice_num_para_nome[num] = nome
 
-      - name: Gerar wikilinks nas notas de índice
-        run: python generate_index_links.py
+# Passo 2: Classificar notas por tipo
+for md_file in CONTENT_DIR.rglob("*.md"):
+    content = md_file.read_text(encoding="utf-8")
+    fm, body = parse_frontmatter(content)
+    tags = get_tags(fm)
+    nome = md_file.stem
 
-      - name: Corrigir espaçamento entre parágrafos
-        run: python fix_paragraphs.py
+    if "nota-índice" in tags or "nota-indice" in tags:
+        continue
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+    idx_val = fm.get("Índice") or fm.get("Indice")
+    indices_da_nota = normalizar_indice(idx_val)
 
-      - name: Instalar dependências
-        run: npm ci
+    for idx in indices_da_nota:
+        nome_indice = indice_num_para_nome.get(idx, idx)
 
-      - name: Build Quartz
-        run: npx quartz build
+        if "nota-referência" in tags or "nota-referencia" in tags:
+            referencias[nome_indice].append(nome)
+        if "nota-permanente" in tags:
+            permanentes[nome_indice].append(nome)
+        if "Jogos" in tags:
+            jogos[nome_indice].append({
+                "nome": fm.get("Nome") or nome,
+                "plataforma": fm.get("Plataforma") or "-",
+                "status": fm.get("Status") or "-",
+                "franquia": fm.get("Franquia") or "-",
+                "slug": nome,
+            })
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
+DATAVIEW_PATTERN = re.compile(r'```dataviewjs.*?```', re.DOTALL)
 
-  deploy:
-    needs: build-and-deploy
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy para GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+substituicoes = 0
+
+for md_file in CONTENT_DIR.rglob("*.md"):
+    content = md_file.read_text(encoding="utf-8")
+    fm, _ = parse_frontmatter(content)
+    tags = get_tags(fm)
+
+    if "nota-índice" not in tags and "nota-indice" not in tags:
+        continue
+
+    nome_indice = md_file.stem
+    refs = referencias.get(nome_indice, [])
+    perms = permanentes.get(nome_indice, [])
+    jogos_lista = jogos.get(nome_indice, [])
+
+    def substituir_dataview(match):
+        bloco = match.group(0)
+
+        if "nota-referência" in bloco or "nota-referencia" in bloco:
+            notas = refs
+            if notas:
+                links = "\n".join(f"- [[{n}]]" for n in sorted(notas))
+            else:
+                links = "_Nenhuma nota vinculada ainda._"
+            return links
+
+        elif "nota-permanente" in bloco:
+            notas = perms
+            if notas:
+                links = "\n".join(f"- [[{n}]]" for n in sorted(notas))
+            else:
+                links = "_Nenhuma nota vinculada ainda._"
+            return links
+
+        elif "#Jogos" in bloco or '"#Jogos"' in bloco or "'#Jogos'" in bloco:
+            if not jogos_lista:
+                return "_Nenhum jogo vinculado ainda._"
+            
+            # Gerar tabela de jogos
+            tabela = "| Jogo | Plataforma | Status | Franquia |\n"
+            tabela += "| :--- | :--- | :--- | :--- |\n"
+            for j in sorted(jogos_lista, key=lambda x: x["nome"]):
+                tabela += f"| [[{j['slug']}\\|{j['nome']}]] | {j['plataforma']} | {j['status']} | {j['franquia']} |\n"
+            return tabela.strip()
+
+        return bloco  # Manter blocos desconhecidos
+
+    novo_conteudo = DATAVIEW_PATTERN.sub(substituir_dataview, content)
+
+    if novo_conteudo != content:
+        md_file.write_text(novo_conteudo, encoding="utf-8")
+        substituicoes += 1
+        print(f"✅ {md_file.name}: {len(refs)} refs, {len(perms)} permanentes, {len(jogos_lista)} jogos")
+
+print(f"\n✨ {substituicoes} notas de índice atualizadas.")
