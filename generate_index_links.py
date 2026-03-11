@@ -2,6 +2,7 @@
 """
 Gera wikilinks estáticos nas notas de índice do Quartz,
 substituindo os blocos dataviewjs por listas de [[links]] reais.
+Também gera tabela de jogos para nota de HOBBIES.
 """
 
 import os
@@ -12,17 +13,12 @@ from collections import defaultdict
 
 CONTENT_DIR = Path("content")
 
-# Mapas: número do índice -> nome do arquivo de índice
-# Ex: "4" -> "4 - BIOLOGIA"
 indice_num_para_nome = {}
-
-# Mapas: nome do arquivo de índice -> lista de notas que apontam para ele
-# Separado por tipo de tag
-referencias = defaultdict(list)    # tag: nota-referência
-permanentes = defaultdict(list)    # tag: nota-permanente
+referencias = defaultdict(list)
+permanentes = defaultdict(list)
+jogos = defaultdict(list)  # índice -> lista de dicts com dados do jogo
 
 def parse_frontmatter(content):
-    """Extrai o frontmatter YAML de um arquivo markdown."""
     if not content.startswith("---"):
         return {}, content
     parts = content.split("---", 2)
@@ -35,47 +31,45 @@ def parse_frontmatter(content):
         return {}, content
 
 def normalizar_indice(valor):
-    """Extrai o número ou nome de um valor de índice."""
     if valor is None:
         return []
     if isinstance(valor, list):
-        return [normalizar_indice(v)[0] for v in valor if normalizar_indice(v)]
+        result = []
+        for v in valor:
+            result.extend(normalizar_indice(v))
+        return result
     s = str(valor).strip()
-    # Wikilink: [[4 - BIOLOGIA]] ou [[4 - BIOLOGIA|alias]]
     match = re.match(r'\[\[([^\]|]+)', s)
     if match:
         return [match.group(1).strip()]
     return [s]
 
 def get_tags(fm):
-    """Retorna lista de tags do frontmatter."""
     tags = fm.get("tags", [])
     if isinstance(tags, str):
         tags = [tags]
-    return [t.lstrip("#").strip() for t in tags]
+    return [t.lstrip("#").strip() for t in (tags or [])]
 
-# --- Passo 1: Descobrir notas de índice e suas notas vinculadas ---
-
-for md_file in CONTENT_DIR.rglob("*.md"):
-    content = md_file.read_text(encoding="utf-8")
-    fm, body = parse_frontmatter(content)
-    tags = get_tags(fm)
-    nome = md_file.stem  # ex: "4 - BIOLOGIA"
-
-    # Registrar notas de índice pelo seu número
-    if "nota-índice" in tags or "nota-indice" in tags:
-        idx_val = fm.get("Índice") or fm.get("Indice")
-        nums = normalizar_indice(idx_val)
-        for num in nums:
-            indice_num_para_nome[num] = nome
-
+# Passo 1: Descobrir notas de índice
 for md_file in CONTENT_DIR.rglob("*.md"):
     content = md_file.read_text(encoding="utf-8")
     fm, body = parse_frontmatter(content)
     tags = get_tags(fm)
     nome = md_file.stem
 
-    # Pular as próprias notas de índice
+    if "nota-índice" in tags or "nota-indice" in tags:
+        idx_val = fm.get("Índice") or fm.get("Indice")
+        nums = normalizar_indice(idx_val)
+        for num in nums:
+            indice_num_para_nome[num] = nome
+
+# Passo 2: Classificar notas por tipo
+for md_file in CONTENT_DIR.rglob("*.md"):
+    content = md_file.read_text(encoding="utf-8")
+    fm, body = parse_frontmatter(content)
+    tags = get_tags(fm)
+    nome = md_file.stem
+
     if "nota-índice" in tags or "nota-indice" in tags:
         continue
 
@@ -83,16 +77,20 @@ for md_file in CONTENT_DIR.rglob("*.md"):
     indices_da_nota = normalizar_indice(idx_val)
 
     for idx in indices_da_nota:
-        # Pode ser número ("4") ou nome completo ("4 - BIOLOGIA")
-        # Tenta resolver pelo número primeiro
         nome_indice = indice_num_para_nome.get(idx, idx)
 
         if "nota-referência" in tags or "nota-referencia" in tags:
             referencias[nome_indice].append(nome)
         if "nota-permanente" in tags:
             permanentes[nome_indice].append(nome)
-
-# --- Passo 2: Reescrever os arquivos de índice ---
+        if "Jogos" in tags:
+            jogos[nome_indice].append({
+                "nome": fm.get("Nome") or nome,
+                "plataforma": fm.get("Plataforma") or "-",
+                "status": fm.get("Status") or "-",
+                "franquia": fm.get("Franquia") or "-",
+                "slug": nome,
+            })
 
 DATAVIEW_PATTERN = re.compile(r'```dataviewjs.*?```', re.DOTALL)
 
@@ -109,29 +107,45 @@ for md_file in CONTENT_DIR.rglob("*.md"):
     nome_indice = md_file.stem
     refs = referencias.get(nome_indice, [])
     perms = permanentes.get(nome_indice, [])
+    jogos_lista = jogos.get(nome_indice, [])
 
     def substituir_dataview(match):
         bloco = match.group(0)
 
-        # Detectar qual tipo de bloco é pelo conteúdo
         if "nota-referência" in bloco or "nota-referencia" in bloco:
             notas = refs
+            if notas:
+                links = "\n".join(f"- [[{n}]]" for n in sorted(notas))
+            else:
+                links = "_Nenhuma nota vinculada ainda._"
+            return links
+
         elif "nota-permanente" in bloco:
             notas = perms
-        else:
-            return bloco  # Manter blocos desconhecidos
+            if notas:
+                links = "\n".join(f"- [[{n}]]" for n in sorted(notas))
+            else:
+                links = "_Nenhuma nota vinculada ainda._"
+            return links
 
-        if notas:
-            links = "\n".join(f"- [[{n}]]" for n in sorted(notas))
-        else:
-            links = "_Nenhuma nota vinculada ainda._"
-        return links
+        elif "#Jogos" in bloco or '"#Jogos"' in bloco or "'#Jogos'" in bloco:
+            if not jogos_lista:
+                return "_Nenhum jogo vinculado ainda._"
+            
+            # Gerar tabela de jogos
+            tabela = "| Jogo | Plataforma | Status | Franquia |\n"
+            tabela += "| :--- | :--- | :--- | :--- |\n"
+            for j in sorted(jogos_lista, key=lambda x: x["nome"]):
+                tabela += f"| [[{j['slug']}\\|{j['nome']}]] | {j['plataforma']} | {j['status']} | {j['franquia']} |\n"
+            return tabela.strip()
+
+        return bloco  # Manter blocos desconhecidos
 
     novo_conteudo = DATAVIEW_PATTERN.sub(substituir_dataview, content)
 
     if novo_conteudo != content:
         md_file.write_text(novo_conteudo, encoding="utf-8")
         substituicoes += 1
-        print(f"✅ {md_file.name}: {len(refs)} refs, {len(perms)} permanentes")
+        print(f"✅ {md_file.name}: {len(refs)} refs, {len(perms)} permanentes, {len(jogos_lista)} jogos")
 
 print(f"\n✨ {substituicoes} notas de índice atualizadas.")
