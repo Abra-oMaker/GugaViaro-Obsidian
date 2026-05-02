@@ -47,6 +47,9 @@ jobs:
       - name: Gerar wikilinks nas notas de índice
         run: python generate_index_links.py
 
+      - name: Corrigir datas das notas
+        run: python fix_dates.py
+
       - name: Corrigir espaçamento entre parágrafos
         run: python fix_paragraphs.py
 
