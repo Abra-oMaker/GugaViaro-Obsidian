@@ -62,6 +62,7 @@ export const defaultContentPageLayout: PageLayout = {
     }),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
+    afterBody: [() => <div id="google_translate_element"></div>],
   ],
 }
 
