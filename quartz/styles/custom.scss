@@ -21,3 +21,19 @@ a.internal.broken {
     text-shadow: 0 0 8px #ff2d55;
   }
 }
+
+// Tema escuro - roxo bem escuro
+:root[saved-theme="dark"] {
+  --light: #0d0b14 !important;
+  --lightgray: #1a1625 !important;
+  --gray: #6e6a86 !important;
+}
+
+// Tema claro - roxo bem claro / quase branco
+:root[saved-theme="light"] {
+  --light: #f0eeff !important;
+  --lightgray: #ddd8f5 !important;
+  --gray: #9d97bc !important;
+  --dark: #2a1f5c !important;
+  --darkgray: #3d2f7a !important;
+}
