@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
 Corrige as datas das notas convertendo o campo 'Criação' para 'date',
-e protege blocos LaTeX de serem modificados por outros scripts.
+compatível com o Quartz.
+Formato esperado: Criação: YYYY-MM-DD, HH:MM
 """
 
 import re
 from pathlib import Path
-from datetime import datetime
 
 CONTENT_DIR = Path("content")
 
@@ -19,18 +19,16 @@ def parse_frontmatter(content):
     return parts[0], parts[1], parts[2]
 
 def fix_date(fm_text):
-    """Converte campo 'Criação: DD/MM/YYYY HH:MM' para 'date: YYYY-MM-DD'"""
-    # Detectar campo Criação
+    # Formato: Criação: YYYY-MM-DD, HH:MM
     match = re.search(
-        r'^Cria[çc][aã]o:\s*(\d{2})[/-](\d{2})[/-](\d{4})',
+        r'^Cria[çc][aã]o:\s*(\d{4}-\d{2}-\d{2})',
         fm_text,
         re.MULTILINE
     )
     if not match:
         return fm_text, False
 
-    day, month, year = match.group(1), match.group(2), match.group(3)
-    date_str = f"{year}-{month}-{day}"
+    date_str = match.group(1)  # já está no formato YYYY-MM-DD
 
     # Verificar se já tem campo 'date'
     if re.search(r'^date:', fm_text, re.MULTILINE):
