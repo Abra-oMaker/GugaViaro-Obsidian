@@ -11,15 +11,20 @@ a.internal {
   }
 }
 
-// Wikilinks inexistentes - vermelho neon
-a.internal.is-unresolved {
+// Links inexistentes - não têm caminho de pasta no data-slug
+a.internal[data-slug]:not([data-slug*="/"]) {
   color: #ff2d55 !important;
-  text-decoration: none;
+  text-shadow: none;
   
   &:hover {
     color: #ff2d55 !important;
     text-shadow: 0 0 8px #ff2d55;
   }
+}
+
+// Garantir que links existentes não sejam afetados
+a.internal[data-slug*="/"] {
+  color: #00fff7 !important;
 }
 
 // Tema escuro - roxo bem escuro
@@ -38,18 +43,9 @@ a.internal.is-unresolved {
   --darkgray: #3d2f7a !important;
 }
 
-// Wikilinks no tema claro
+// Tema claro - links inexistentes
 :root[saved-theme="light"] {
-  a.internal {
-    color: #0099aa !important;
-    
-    &:hover {
-      color: #0099aa !important;
-      text-shadow: 0 0 6px #0099aa;
-    }
-  }
-
-  a.internal.is-unresolved {
+  a.internal[data-slug]:not([data-slug*="/"]) {
     color: #cc1133 !important;
     
     &:hover {
