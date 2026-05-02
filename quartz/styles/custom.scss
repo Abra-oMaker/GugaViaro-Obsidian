@@ -12,7 +12,7 @@ a.internal {
 }
 
 // Wikilinks inexistentes - vermelho neon
-a.internal.broken {
+a.internal.is-unresolved {
   color: #ff2d55 !important;
   text-decoration: none;
   
@@ -31,9 +31,30 @@ a.internal.broken {
 
 // Tema claro - roxo bem claro / quase branco
 :root[saved-theme="light"] {
-  --light: #f0eeff !important;
+  --light: #d8d8df !important;
   --lightgray: #ddd8f5 !important;
   --gray: #9d97bc !important;
   --dark: #2a1f5c !important;
   --darkgray: #3d2f7a !important;
+}
+
+// Wikilinks no tema claro
+:root[saved-theme="light"] {
+  a.internal {
+    color: #0099aa !important;
+    
+    &:hover {
+      color: #0099aa !important;
+      text-shadow: 0 0 6px #0099aa;
+    }
+  }
+
+  a.internal.is-unresolved {
+    color: #cc1133 !important;
+    
+    &:hover {
+      color: #cc1133 !important;
+      text-shadow: 0 0 6px #cc1133;
+    }
+  }
 }
