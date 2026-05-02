@@ -5,6 +5,7 @@ Preserva frontmatter, blocos de código, tabelas, listas e blocos LaTeX.
 """
 
 from pathlib import Path
+import re
 
 CONTENT_DIR = Path("content")
 
@@ -27,11 +28,13 @@ def fix_paragraphs(content):
     for i, line in enumerate(lines):
         stripped = line.strip()
 
+        # Detectar blocos LaTeX $$ (linha sozinha)
         if stripped == "$$":
             in_latex_block = not in_latex_block
             result.append(line)
             continue
 
+        # Detectar blocos de código
         if stripped.startswith("```"):
             in_code_block = not in_code_block
             result.append(line)
@@ -39,12 +42,14 @@ def fix_paragraphs(content):
 
         result.append(line)
 
+        # Dentro de bloco protegido, não mexer
         if in_code_block or in_latex_block:
             continue
 
-        if "|" in line and "---" in line:
+        # Detectar tabelas
+        if re.match(r'^\|.*\|', stripped) and "---" in stripped:
             in_table = True
-        elif in_table and "|" not in stripped:
+        elif in_table and not re.match(r'^\|', stripped):
             in_table = False
 
         if in_table:
@@ -52,6 +57,9 @@ def fix_paragraphs(content):
 
         current = stripped
         next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
+
+        # Verificar se a linha tem LaTeX inline $$...$$
+        has_inline_latex = current.count("$$") >= 2
 
         skip = (
             not current
@@ -61,17 +69,16 @@ def fix_paragraphs(content):
             or next_line.startswith("-")
             or next_line.startswith("*")
             or next_line.startswith(">")
-            or next_line.startswith("|")
+            or re.match(r'^\|', next_line)
             or next_line.startswith("$$")
             or current.startswith("-")
             or current.startswith("*")
             or current.startswith(">")
-            or current.startswith("|")
+            or re.match(r'^\|', current)
             or current.startswith("!")
             or current.startswith("$$")
             or next_line.startswith("!")
             or current.endswith("\\")
-            or current.endswith("$$")
         )
 
         if not skip:
