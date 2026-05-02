@@ -1,3 +1,23 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+// Wikilinks existentes - ciano neon
+a.internal {
+  color: #00fff7 !important;
+  text-decoration: none;
+  
+  &:hover {
+    color: #00fff7 !important;
+    text-shadow: 0 0 8px #00fff7;
+  }
+}
+
+// Wikilinks inexistentes - vermelho neon
+a.internal.broken {
+  color: #ff2d55 !important;
+  text-decoration: none;
+  
+  &:hover {
+    color: #ff2d55 !important;
+    text-shadow: 0 0 8px #ff2d55;
+  }
+}
