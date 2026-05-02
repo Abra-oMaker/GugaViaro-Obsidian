@@ -2,12 +2,24 @@
 """
 Corrige espaçamento entre parágrafos nas notas do Quartz.
 Preserva frontmatter, blocos de código, tabelas, listas e blocos LaTeX.
+Separa blocos $$ que estejam colados ao texto.
 """
 
 from pathlib import Path
 import re
 
 CONTENT_DIR = Path("content")
+
+def separate_latex_blocks(body):
+    """
+    Garante que $$ blocos estejam em linhas próprias.
+    Ex: 'texto: $$formula$$' -> 'texto:\n\n$$formula$$'
+    """
+    # Separar $$ do texto anterior na mesma linha
+    body = re.sub(r'(.+?)(\$\$[^$]+\$\$)', r'\1\n\n\2', body)
+    # Separar $$ do texto posterior na mesma linha  
+    body = re.sub(r'(\$\$[^$]+\$\$)(.+)', r'\1\n\n\2', body)
+    return body
 
 def fix_paragraphs(content):
     frontmatter = ""
@@ -19,6 +31,9 @@ def fix_paragraphs(content):
             frontmatter = "---" + parts[1] + "---"
             body = parts[2]
 
+    # Primeiro separar LaTeX inline que está colado ao texto
+    body = separate_latex_blocks(body)
+
     lines = body.split("\n")
     result = []
     in_code_block = False
@@ -28,13 +43,11 @@ def fix_paragraphs(content):
     for i, line in enumerate(lines):
         stripped = line.strip()
 
-        # Detectar blocos LaTeX $$ (linha sozinha)
         if stripped == "$$":
             in_latex_block = not in_latex_block
             result.append(line)
             continue
 
-        # Detectar blocos de código
         if stripped.startswith("```"):
             in_code_block = not in_code_block
             result.append(line)
@@ -42,11 +55,9 @@ def fix_paragraphs(content):
 
         result.append(line)
 
-        # Dentro de bloco protegido, não mexer
         if in_code_block or in_latex_block:
             continue
 
-        # Detectar tabelas
         if re.match(r'^\|.*\|', stripped) and "---" in stripped:
             in_table = True
         elif in_table and not re.match(r'^\|', stripped):
@@ -57,9 +68,6 @@ def fix_paragraphs(content):
 
         current = stripped
         next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
-
-        # Verificar se a linha tem LaTeX inline $$...$$
-        has_inline_latex = current.count("$$") >= 2
 
         skip = (
             not current
@@ -94,4 +102,4 @@ for md_file in CONTENT_DIR.rglob("*.md"):
         md_file.write_text(new_content, encoding="utf-8")
         fixed += 1
 
-print(f"✅ {fixed} arquivos com parágrafos corrigidos.")
+print(f"✅ {fixed} arquivos corrigidos.")
