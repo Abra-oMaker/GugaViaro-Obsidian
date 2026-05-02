@@ -97,6 +97,15 @@ export default (() => {
             return resource
           }
         })}
+        <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          function googleTranslateElementInit() {
+            new google.translate.TranslateElement(
+              {pageLanguage: 'pt'},
+              'google_translate_element'
+            );
+          }
+        `}} />
       </head>
     )
   }
