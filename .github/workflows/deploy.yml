@@ -28,7 +28,6 @@ jobs:
           cp -r "vault-source/Arquivos/." content/
           mkdir -p content/Imagens
           cp -r "vault-source/Imagens/." content/Imagens/
-          cp -r "vault-source/Bibliotecas/." content/
           echo "✅ Notas copiadas para content/"
 
       - name: Criar página inicial (Bem vindo)
