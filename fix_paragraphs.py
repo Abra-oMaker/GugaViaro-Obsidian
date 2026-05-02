@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
 Corrige espaçamento entre parágrafos nas notas do Quartz.
-Adiciona linha em branco entre linhas de texto que não têm separação,
-preservando frontmatter, blocos de código, tabelas e listas.
+Preserva frontmatter, blocos de código, tabelas, listas e blocos LaTeX.
 """
 
-import re
 from pathlib import Path
 
 CONTENT_DIR = Path("content")
 
 def fix_paragraphs(content):
-    # Separar frontmatter do corpo
     frontmatter = ""
     body = content
-    
+
     if content.startswith("---"):
         parts = content.split("---", 2)
         if len(parts) >= 3:
@@ -24,57 +21,63 @@ def fix_paragraphs(content):
     lines = body.split("\n")
     result = []
     in_code_block = False
+    in_latex_block = False
     in_table = False
 
     for i, line in enumerate(lines):
-        # Detectar blocos de código
-        if line.strip().startswith("```"):
+        stripped = line.strip()
+
+        if stripped == "$$":
+            in_latex_block = not in_latex_block
+            result.append(line)
+            continue
+
+        if stripped.startswith("```"):
             in_code_block = not in_code_block
+            result.append(line)
+            continue
 
         result.append(line)
 
-        # Dentro de bloco de código, não mexer
-        if in_code_block:
+        if in_code_block or in_latex_block:
             continue
 
-        # Detectar tabelas
         if "|" in line and "---" in line:
             in_table = True
-        elif in_table and "|" not in line:
+        elif in_table and "|" not in stripped:
             in_table = False
 
         if in_table:
             continue
 
-        # Verificar se precisa adicionar linha em branco
-        current = line.strip()
+        current = stripped
         next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
 
-        # Condições para NÃO adicionar linha em branco:
         skip = (
-            not current                          # linha atual vazia
-            or not next_line                     # próxima linha vazia
-            or next_line.startswith("#")         # próxima é cabeçalho
-            or current.startswith("#")           # atual é cabeçalho
-            or next_line.startswith("-")         # próxima é lista
-            or next_line.startswith("*")         # próxima é lista
-            or next_line.startswith(">")         # próxima é blockquote
-            or next_line.startswith("|")         # próxima é tabela
-            or current.startswith("-")           # atual é lista
-            or current.startswith("*")           # atual é lista
-            or current.startswith(">")           # atual é blockquote
-            or current.startswith("|")           # atual é tabela
-            or current.startswith("!")           # atual é imagem/embed
-            or next_line.startswith("!")         # próxima é imagem/embed
-            or current.endswith("\\")            # quebra de linha forçada
+            not current
+            or not next_line
+            or next_line.startswith("#")
+            or current.startswith("#")
+            or next_line.startswith("-")
+            or next_line.startswith("*")
+            or next_line.startswith(">")
+            or next_line.startswith("|")
+            or next_line.startswith("$$")
+            or current.startswith("-")
+            or current.startswith("*")
+            or current.startswith(">")
+            or current.startswith("|")
+            or current.startswith("!")
+            or current.startswith("$$")
+            or next_line.startswith("!")
+            or current.endswith("\\")
+            or current.endswith("$$")
         )
 
         if not skip:
-            # Adicionar linha em branco entre parágrafos
             result.append("")
 
-    fixed_body = "\n".join(result)
-    return frontmatter + fixed_body
+    return frontmatter + "\n".join(result)
 
 fixed = 0
 for md_file in CONTENT_DIR.rglob("*.md"):
@@ -84,4 +87,4 @@ for md_file in CONTENT_DIR.rglob("*.md"):
         md_file.write_text(new_content, encoding="utf-8")
         fixed += 1
 
-print(f"✅ {fixed} arquivos corrigidos.")
+print(f"✅ {fixed} arquivos com parágrafos corrigidos.")
