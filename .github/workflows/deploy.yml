@@ -52,6 +52,9 @@ jobs:
       - name: Corrigir espaçamento entre parágrafos
         run: python fix_paragraphs.py
 
+      - name: Corrigir LaTeX
+        run: python fix_latex.py
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
