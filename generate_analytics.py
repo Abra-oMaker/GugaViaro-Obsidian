@@ -210,7 +210,7 @@ analytics_data = {
 }
 
 # Salvar JSON
-json_path = CONTENT_DIR / "analytics-data.json"
+json_path = Path("analytics-data.json")
 json_path.write_text(json.dumps(analytics_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 print(f"✅ Analytics gerado: {total_notes} notas, {total_words} palavras, {total_links} links.")
