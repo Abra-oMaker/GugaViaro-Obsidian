@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — GugaViaro's Vault</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0812;
+    --surface: #12101e;
+    --surface2: #1a1730;
+    --border: #2a2545;
+    --accent: #c084fc;
+    --accent2: #00fff7;
+    --accent3: #ff2d55;
+    --accent4: #f59e0b;
+    --text: #e2d9f3;
+    --muted: #7c6fa0;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(192,132,252,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(192,132,252,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 3rem 0 2rem;
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 1.5rem auto 0;
+  }
+
+  .header-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+
+  .header .subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.75rem;
+    letter-spacing: 0.1em;
+  }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .stat-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--accent));
+  }
+
+  .stat-card .label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-card .value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--card-accent, var(--accent));
+    line-height: 1;
+  }
+
+  .stat-card .unit {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 2.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .section-badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(192,132,252,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(192,132,252,0.3);
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    overflow: hidden;
+  }
+
+  /* Two col layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* Bar chart */
+  .bar-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .bar-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .bar-label {
+    font-size: 0.72rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--bar-color, var(--accent));
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .bar-value {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+    min-width: 2rem;
+  }
+
+  /* Toggle */
+  .toggle-group {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .toggle-btn {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .toggle-btn.active {
+    background: rgba(192,132,252,0.2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Health bar */
+  .health-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+  }
+
+  .health-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent3), var(--accent4), var(--accent2));
+  }
+
+  /* Tag cloud */
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .tag-pill {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface2);
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .tag-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Orphan list */
+  .orphan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .orphan-pill {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    background: rgba(255,45,85,0.1);
+    border: 1px solid rgba(255,45,85,0.3);
+    color: var(--accent3);
+  }
+
+  /* Monthly chart */
+  .monthly-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 80px;
+    margin-top: 0.5rem;
+  }
+
+  .month-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+
+  .month-bar {
+    width: 100%;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    min-height: 2px;
+  }
+
+  .month-bar:hover { opacity: 1; }
+
+  .month-label {
+    font-size: 0.5rem;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Word dist */
+  .word-dist {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    height: 60px;
+    margin-top: 0.5rem;
+  }
+
+  .word-dist-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .word-dist-fill {
+    width: 100%;
+    background: var(--accent2);
+    border-radius: 3px 3px 0 0;
+    opacity: 0.7;
+    min-height: 2px;
+  }
+
+  .word-dist-label {
+    font-size: 0.5rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 4rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+  }
+
+  .error {
+    text-align: center;
+    padding: 2rem;
+    color: var(--accent3);
+    font-size: 0.8rem;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1rem 0;
+  }
+
+  .inline-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+  }
+
+  .inline-stat:last-child { border-bottom: none; }
+  .inline-stat .k { color: var(--muted); }
+  .inline-stat .v { color: var(--accent); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header class="header">
+    <div class="header-label">// vault.analytics</div>
+    <h1>GugaViaro's Vault</h1>
+    <p class="subtitle" id="generated-at">Carregando dados...</p>
+  </header>
+
+  <div id="dashboard">
+    <div class="loading">⟳ carregando métricas...</div>
+  </div>
+
+  <footer class="footer">
+    DATENBASE VAULT ANALYTICS · GERADO AUTOMATICAMENTE
+  </footer>
+</div>
+
+<script>
+async function loadData() {
+  try {
+    const base = window.location.pathname.replace(/\/[^/]*$/, '');
+    const res = await fetch(base + '/analytics-data.json');
+    if (!res.ok) throw new Error('Dados não encontrados');
+    return await res.json();
+  } catch(e) {
+    // Tentar caminho alternativo
+    try {
+      const res2 = await fetch('/GugaViaro-Obsidian/analytics-data.json');
+      if (!res2.ok) throw new Error('Dados não encontrados');
+      return await res2.json();
+    } catch(e2) {
+      return null;
+    }
+  }
+}
+
+function bar(items, maxVal, color = 'var(--accent)', labelKey = 'name', valueKey = 'count') {
+  return items.map(item => {
+    const pct = maxVal > 0 ? (item[valueKey] / maxVal * 100) : 0;
+    const label = item[labelKey] || item;
+    const value = item[valueKey] ?? '';
+    return `
+      <div class="bar-item">
+        <span class="bar-label" title="${label}">${label}</span>
+        <span class="bar-value">${value}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;--bar-color:${color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderDashboard(d) {
+  const s = d.summary;
+  const dashboard = document.getElementById('dashboard');
+  document.getElementById('generated-at').textContent = `Gerado em ${d.generated_at}`;
+
+  // Dados de links com/sem índice
+  let showIndex = true;
+
+  function getTopLinked() {
+    return showIndex ? d.top_linked_all : d.top_linked_no_index;
+  }
+
+  function renderTopLinked() {
+    const items = getTopLinked();
+    const max = items[0]?.count || 1;
+    document.getElementById('top-linked-bars').innerHTML = bar(items, max, 'var(--accent)');
+  }
+
+  dashboard.innerHTML = `
+    <!-- Summary cards -->
+    <div class="summary-grid">
+      <div class="stat-card" style="--card-accent:var(--accent)">
+        <div class="label">Total de Notas</div>
+        <div class="value">${s.total_notes}</div>
+        <div class="unit">arquivos .md</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--accent2)">
+        <div class="label">Total de Palavras</div>
+        <div class="value">${s.total_words.toLocaleString('pt-BR')}</div>
+        <div class="unit">~${s.avg_words} por nota</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--accent)">
+        <div class="label">Total de Links</div>
+        <div class="value">${s.total_links}</div>
+        <div class="unit">~${s.avg_links} por nota</div>
+      </div>
+      <div class="stat-card" style="--card-accent:${s.link_health >= 80 ? 'var(--accent2)' : s.link_health >= 50 ? 'var(--accent4)' : 'var(--accent3)'}">
+        <div class="label">Saúde dos Links</div>
+        <div class="value">${s.link_health}%</div>
+        <div class="unit">${s.total_broken} links quebrados</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--accent3)">
+        <div class="label">Notas Órfãs</div>
+        <div class="value">${s.orphan_count}</div>
+        <div class="unit">sem conexões</div>
+      </div>
+      <div class="stat-card" style="--card-accent:var(--accent4)">
+        <div class="label">Sem Data</div>
+        <div class="value">${s.no_date_count}</div>
+        <div class="unit">notas sem criação</div>
+      </div>
+    </div>
+
+    <!-- Crescimento + Distribuição de palavras -->
+    <div class="two-col">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Crescimento do Vault</span>
+          <span class="section-badge">por mês</span>
+        </div>
+        <div class="panel">
+          ${d.monthly_growth.length > 0 ? `
+            <div class="monthly-chart" id="monthly-chart"></div>
+          ` : '<div style="font-size:0.75rem;color:var(--muted)">Sem dados de data disponíveis.</div>'}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Distribuição por Palavras</span>
+          <span class="section-badge">por nota</span>
+        </div>
+        <div class="panel">
+          <div class="word-dist" id="word-dist"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notas por índice + Status -->
+    <div class="two-col">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Notas por Índice</span>
+        </div>
+        <div class="panel">
+          <div class="bar-list">
+            ${(() => {
+              const items = Object.entries(d.index_counts).map(([k,v]) => ({name: k, count: v}));
+              const max = items[0]?.count || 1;
+              return bar(items, max, 'var(--accent)');
+            })()}
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Status das Notas</span>
+        </div>
+        <div class="panel">
+          <div class="bar-list">
+            ${(() => {
+              const colors = {'Done':'var(--accent2)', 'In Progress':'var(--accent4)', 'To do':'var(--accent3)'};
+              const items = Object.entries(d.status_counts).map(([k,v]) => ({name: k, count: v}));
+              const max = items[0]?.count || 1;
+              return items.map(item => {
+                const pct = (item.count / max * 100);
+                const color = colors[item.name] || 'var(--accent)';
+                return `
+                  <div class="bar-item">
+                    <span class="bar-label">${item.name}</span>
+                    <span class="bar-value">${item.count}</span>
+                    <div class="bar-track">
+                      <div class="bar-fill" style="width:${pct}%;--bar-color:${color}"></div>
+                    </div>
+                  </div>`;
+              }).join('');
+            })()}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top notas por links -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Notas com Mais Conexões</span>
+      </div>
+      <div class="panel">
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="btn-with-index" onclick="setIndex(true)">Com notas de índice</button>
+          <button class="toggle-btn" id="btn-no-index" onclick="setIndex(false)">Sem notas de índice</button>
+        </div>
+        <div class="bar-list" id="top-linked-bars"></div>
+      </div>
+    </div>
+
+    <!-- Top notas por palavras + Pastas -->
+    <div class="two-col">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Notas Mais Longas</span>
+          <span class="section-badge">por palavras</span>
+        </div>
+        <div class="panel">
+          <div class="bar-list">
+            ${bar(d.top_words, d.top_words[0]?.count || 1, 'var(--accent2)')}
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Notas por Pasta</span>
+        </div>
+        <div class="panel">
+          <div class="bar-list">
+            ${(() => {
+              const items = Object.entries(d.folder_counts).map(([k,v]) => ({name: k || 'raiz', count: v}));
+              const max = items[0]?.count || 1;
+              return bar(items, max, 'var(--accent4)');
+            })()}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Tags Mais Usadas</span>
+        <span class="section-badge">top 20</span>
+      </div>
+      <div class="panel">
+        <div class="tag-cloud">
+          ${Object.entries(d.tag_counts).map(([tag, count]) => {
+            const size = Math.min(1 + count / 20, 1.4);
+            return `<span class="tag-pill" style="font-size:${size * 0.65}rem" title="${count} notas">#${tag} <span style="color:var(--accent);font-weight:700">${count}</span></span>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Links quebrados + Órfãs -->
+    <div class="two-col">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Mais Links Quebrados</span>
+          <span class="section-badge" style="background:rgba(255,45,85,0.1);color:var(--accent3);border-color:rgba(255,45,85,0.3)">${s.total_broken} total</span>
+        </div>
+        <div class="panel">
+          ${d.top_broken.length > 0 ? `
+            <div class="bar-list">
+              ${bar(d.top_broken, d.top_broken[0]?.count || 1, 'var(--accent3)')}
+            </div>
+          ` : '<div style="font-size:0.75rem;color:var(--accent2)">✓ Nenhum link quebrado!</div>'}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">Notas Órfãs</span>
+          <span class="section-badge" style="background:rgba(255,45,85,0.1);color:var(--accent3);border-color:rgba(255,45,85,0.3)">${s.orphan_count} notas</span>
+        </div>
+        <div class="panel">
+          ${d.orphan_notes.length > 0 ? `
+            <div class="orphan-list">
+              ${d.orphan_notes.map(n => `<span class="orphan-pill">${n}</span>`).join('')}
+            </div>
+            ${d.orphan_notes.length === 20 ? '<div style="font-size:0.65rem;color:var(--muted);margin-top:0.5rem">+ mais notas...</div>' : ''}
+          ` : '<div style="font-size:0.75rem;color:var(--accent2)">✓ Todas as notas conectadas!</div>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Renderizar gráfico mensal
+  if (d.monthly_growth.length > 0) {
+    const maxMonthly = Math.max(...d.monthly_growth.map(m => m.count));
+    const chart = document.getElementById('monthly-chart');
+    if (chart) {
+      chart.innerHTML = d.monthly_growth.map(m => {
+        const h = Math.max((m.count / maxMonthly) * 100, 2);
+        const [year, month] = m.month.split('-');
+        const months = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+        const label = months[parseInt(month) - 1] + '/' + year.slice(2);
+        return `
+          <div class="month-bar-wrap" title="${m.month}: ${m.count} notas">
+            <div class="month-bar" style="height:${h}%"></div>
+            <div class="month-label">${label}</div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // Renderizar distribuição de palavras
+  const wd = document.getElementById('word-dist');
+  if (wd) {
+    const wdData = d.word_ranges;
+    const maxWd = Math.max(...Object.values(wdData));
+    wd.innerHTML = Object.entries(wdData).map(([range, count]) => {
+      const h = Math.max((count / maxWd) * 100, 2);
+      return `
+        <div class="word-dist-bar" title="${range} palavras: ${count} notas">
+          <div class="word-dist-fill" style="height:${h}%"></div>
+          <div class="word-dist-label">${range}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // Render top linked inicial
+  renderTopLinked();
+
+  // Expor funções globais
+  window.setIndex = function(val) {
+    showIndex = val;
+    document.getElementById('btn-with-index').classList.toggle('active', val);
+    document.getElementById('btn-no-index').classList.toggle('active', !val);
+    renderTopLinked();
+  };
+
+  window.renderTopLinked = renderTopLinked;
+}
+
+loadData().then(data => {
+  if (!data) {
+    document.getElementById('dashboard').innerHTML = `
+      <div class="error">
+        ⚠ Dados de analytics não encontrados.<br>
+        <span style="font-size:0.7rem;color:var(--muted)">Certifique-se de que o script generate_analytics.py rodou corretamente no deploy.</span>
+      </div>`;
+    return;
+  }
+  renderDashboard(data);
+});
+</script>
+</body>
+</html>
