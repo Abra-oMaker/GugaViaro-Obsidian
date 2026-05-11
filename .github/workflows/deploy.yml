@@ -59,10 +59,10 @@ jobs:
         run: |
           python generate_analytics.py
           mkdir -p static
+          cp analytics-data.json static/analytics-data.json
           cp analytics.html static/analytics-dashboard.html
           echo '---' > content/analytics.md
           echo 'title: Analytics' >> content/analytics.md
-          echo 'draft: false' >> content/analytics.md
           echo '---' >> content/analytics.md
           echo '' >> content/analytics.md
           echo '<iframe src="/GugaViaro-Obsidian/analytics-dashboard.html" style="width:100%;height:90vh;border:none;border-radius:12px"></iframe>' >> content/analytics.md
