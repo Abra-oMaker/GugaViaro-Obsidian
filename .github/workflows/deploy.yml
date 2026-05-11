@@ -55,6 +55,11 @@ jobs:
       - name: Corrigir LaTeX
         run: python fix_latex.py
 
+      - name: Gerar analytics do vault
+        run: |
+          python generate_analytics.py
+          cp analytics.html content/analytics.html
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
