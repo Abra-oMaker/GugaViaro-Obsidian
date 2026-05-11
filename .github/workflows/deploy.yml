@@ -60,7 +60,11 @@ jobs:
           python generate_analytics.py
           mkdir -p static
           cp analytics.html static/analytics-dashboard.html
-          printf -- '---\ntitle: Analytics\n---\n\n<iframe src="/GugaViaro-Obsidian/analytics-dashboard.html" style="width:100%;height:90vh;border:none;border-radius:12px"></iframe>\n' > content/analytics.md
+          echo '---' > content/analytics.md
+          echo 'title: Analytics' >> content/analytics.md
+          echo '---' >> content/analytics.md
+          echo '' >> content/analytics.md
+          echo '<iframe src="/GugaViaro-Obsidian/analytics-dashboard.html" style="width:100%;height:90vh;border:none;border-radius:12px"></iframe>' >> content/analytics.md
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
