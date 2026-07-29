@@ -26,6 +26,7 @@ jobs:
           rm -rf content/*
           cp -r "vault-source/Notas - Método Datenbase/." content/
           cp -r "vault-source/Arquivos/." content/
+          cp -r "vault-source/Bibliotecas/." content/
           mkdir -p content/Imagens
           cp -r "vault-source/Arquivos/Imagens/." content/Imagens/
           echo "✅ Notas copiadas para content/"
